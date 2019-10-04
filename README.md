@@ -23,10 +23,37 @@ Applying this concept to our organization, we could end up with the following ap
 
 This works! The approach addresses all of the challenges identified at the beginning of this article, is elegant in its setup and the amount of work in maintaining the build agents seems manageable. 
 
-As time progresses and the number of project using this setup grows, so do the costs involved in running a large number of self-hosted build agents. What works for few applications does not work for many. What could we do to optimize?
+Unfortunately, the approach has some limitations as well. As time progresses and the number of project using this setup grows, so do the costs involved in running a large number of self-hosted build agents. What works for few applications does not work for many. 
 
-* Configure Auto-shutdown / Automated startup to reduce costs outside of business hours
-* Use a container orchestrator (e.g. Azure Kubernetes Services) to run the workload
+What could we do to optimize?
+
+### Reduce running costs of the current setup
+#### Option 1: Keep setup as-is; configure Auto-shutdown / automated startup
+A quick mitigation is to shut down the environment outside of business hours. This is relatively simple to complete, and reducing our compute hours from 24*7 to 12*5 is reducing overall costs with about 60%.
+
+#### Option 2: Keep setup as-is; switch to B-series machines
+Shutting down our build agents may not be desirable. An alternative is to change our regular VMs to burstable [B-series VMs](https://azure.microsoft.com/nl-nl/blog/introducing-b-series-our-new-burstable-vm-size). B-series are charged at a lower rate (around 15%) and offers a great alternative for regular VMs in scenarios where the VM has frequent but unpreditable periods of idle time. 
+
+When idle, the B-series will generate credits which can be used to perform at their maximum capacity at later time. When the credits run out, the system will be throttled to run at a lower capacity.
+
+#### Option 3: Keep setup as-is; Leverage Reserved Instances
+Another way to reduce costs is via [Reserved Instances (RI)](https://azure.microsoft.com/en-us/pricing/reserved-vm-instances/). With RI, you commit upfront to a particular workload for the next 1 or 3 years. In return, Microsoft bills your workload at a discounted rate, depending on the type of resource and the region (see [Azure Pricing Calculator](https://azure.microsoft.com/en-us/pricing/calculator/). 
+
+> To optimize costs, B-Series VMs can be _combined_ with Reserved Instances. 
+>
+> To illustrate this, let's use the Azure Calculator to compare the price in North Europe for
+> * a single DS3v2 (4 vCPU, 14GB RAM, 28GB Temp storage), without reservations 
+> * a B4MS (4 vCPU, 14GB RAM, 32GB Temp storage) + 3 years reservation
+>
+> The savings are more than **73%**! This goes beyond what can be achieved with shutting down the machines.
+
+### Reconsider our setup
+
+
+### Option 4: Container Orchestrator
+
+
+* Use a container orchestrator (e.g. Azure Kubernetes Services) to run the workload? This helps us to run multiple agents
 * Share our self-hosted build agents across projects?
 
 ## The concepts

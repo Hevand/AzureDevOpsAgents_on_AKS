@@ -95,6 +95,8 @@ Fortunately, this is possible in multiple ways:
 [Create a docker-based agent](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/docker?view=azure-devops)
 [Publish to a private repo](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli)
 
+[Connect kubectl](https://social.technet.microsoft.com/wiki/contents/articles/51499.azure-kubernetes-service-aks-getting-started.aspx)
+
 ## Next steps
 
 ### Hardening the build agents

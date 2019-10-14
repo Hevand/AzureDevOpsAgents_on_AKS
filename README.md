@@ -89,6 +89,12 @@ Fortunately, this is possible in multiple ways:
 
 ## Solution diagram
 
+
+## Creating the solution
+[Docker client]()
+[Create a docker-based agent](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/docker?view=azure-devops)
+[Publish to a private repo](https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli)
+
 ## Next steps
 
 ### Hardening the build agents

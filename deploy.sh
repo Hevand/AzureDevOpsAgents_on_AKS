@@ -7,6 +7,9 @@ containerRepositoryName="azuredevopsbuildagentimages"
 containerName="buildagent"
 location="WestEurope"
 
+azureDevOpsUri="https://dev.azure.com/hevand"
+azureDevOpsPat="35m24umnhnhcwr7koyuwkcklzellbx6lbh3tlpbg5cq2ngmzrgma"
+
 # Azure Portal
 ## Login
 az configure --defaults location=$location
@@ -29,4 +32,43 @@ az aks get-credentials -g $resourceGroup -n $clusterName
 #Install kubectl. 
 sudo az aks install-cli
 
-kubectl apply -f buildagent.yaml
+resourceGroup="blog-buildagent-rg"
+clusterName="azuredevopsbuildagents"
+containerRepositoryName="azuredevopsbuildagentimages"
+containerName="buildagent"
+location="WestEurope"
+
+azureDevOpsUri="https://dev.azure.com/hevand"
+azureDevOpsPat="35m24umnhnhcwr7koyuwkcklzellbx6lbh3tlpbg5cq2ngmzrgma"
+
+# Defining the YAML file in the deployment script, so that parameters can easily be incorporated.
+buildagent=$(cat << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buildagent-deployment
+  labels:
+    app: buildagent-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: buildagent
+  template:
+    metadata:
+      labels:
+        app: buildagent
+    spec:
+      containers:
+      - name: buildagent
+        image: $containerRepositoryName.azurecr.io/$containerName:latest
+        env:
+        - name: AZP_URL
+          value: "$azureDevOpsUri"
+        - name: AZP_TOKEN
+          value: "$azureDevOpsPat"
+
+EOF
+)
+
+echo "$buildagent" | kubectl apply

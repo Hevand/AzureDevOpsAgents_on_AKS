@@ -24,6 +24,8 @@ Applying this concept to their organization, they drafted an initial approach an
 4) Grant the MSI permissions to this subscription or resource group
 5) In Azure DevOps, configure the build / release pipelines to use the registered self-hosted build agent
 
+![Azure agent per project](assets/AzureAgentPerProject.svg)
+
 This works! The approach addresses all of the challenges identified at the beginning of this article and is mostly manageable. 
 
 Unfortunately, the approach has some limitations as well. As time progresses and the number of project using this setup will grow, so do the costs involved in running a large number of self-hosted build agents. What works for few applications does not work for many. 
@@ -88,7 +90,9 @@ Fortunately, this is possible in multiple ways:
 
 
 ## Solution diagram
+![DevOps - Agent Per Organization](assets/DevOpsAgentPerOrganization.svg)
 
+![Azure - Agent Per Organization](assets/AzureAgentPerOrganization.svg)
 
 ## Creating the solution
 [Docker client]()

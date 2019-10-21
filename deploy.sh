@@ -1,47 +1,56 @@
 #!/bin/bash
 
-#### Configuration
-resourceGroup="blog-buildagent-rg"
-clusterName="azuredevopsbuildagents"
-containerRepositoryName="azuredevopsbuildagentimages"
-containerName="buildagent"
-location="WestEurope"
-
+# Azure DevOps
 azureDevOpsUri="https://dev.azure.com/hevand"
 azureDevOpsPat="35m24umnhnhcwr7koyuwkcklzellbx6lbh3tlpbg5cq2ngmzrgma"
 
-# Azure Portal
-## Login
+#### Configuration
+subscriptionId=""
+location="WestEurope"
+resourceGroup="blog-buildagent-rg"
+clusterName="azdo"
+containerRepositoryName="azuredevopsbuildagentimages"
+containerName="buildagent"
+
+# Let's make sure that we're logged in as the authorized user and working in the right subscription:
+az login
+az account set -s $subscriptionId
+
 az configure --defaults location=$location
 
-## Resource Group
+# Azure CLI defaults / extensions
+# - Cluster autoscaler: https://docs.microsoft.com/en-us/azure/aks/cluster-autoscaler
+az extension add --name aks-preview
+az extension update --name aks-preview
+
+## Create Resource Group
 az group create --name $resourceGroup
 
-# Create an ACR and AKS
+# Create an ACR
 az acr create -g $resourceGroup -n $containerRepositoryName --sku Basic
-az aks create -g $resourceGroup -n $clusterName --ssh-key-value ~/.ssh/id_rsa.pub --attach-acr $containerRepositoryName
 
-# Build and push the container image
-cd ./buildagent
+# Create AKS:
+# - Connect with ACR for service principal authorization
+# - Enable VM Scale Sets + AutoScaling (1..10)
+az aks create -g $resourceGroup -n $clusterName \
+  --ssh-key-value ~/.ssh/id_rsa.pub \
+  --attach-acr $containerRepositoryName \
+  --node-count 1 \
+  --enable-vmss \
+  --enable-cluster-autoscaler \
+  --min-count 1 \
+  --max-count 10
+
+# Build and push the container image to the ACR
+cd */buildagent
 az acr login --name $containerRepositoryName
 az acr build -t $containerName -r $containerRepositoryName .
 
-# Get AKS credentials
+# Get AKS credentials, to be used with kubectl
 az aks get-credentials -g $resourceGroup -n $clusterName
 
-#Install kubectl. 
-sudo az aks install-cli
-
-resourceGroup="blog-buildagent-rg"
-clusterName="azuredevopsbuildagents"
-containerRepositoryName="azuredevopsbuildagentimages"
-containerName="buildagent"
-location="WestEurope"
-
-azureDevOpsUri="https://dev.azure.com/hevand"
-azureDevOpsPat="35m24umnhnhcwr7koyuwkcklzellbx6lbh3tlpbg5cq2ngmzrgma"
-
-# Defining the YAML file in the deployment script, so that parameters can easily be incorporated.
+# Deployment YAML file
+# - Integrated in deploy.sh for simplified / readable parameter substitution
 buildagent=$(cat << EOF
 apiVersion: apps/v1
 kind: Deployment
@@ -50,7 +59,7 @@ metadata:
   labels:
     app: buildagent-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: buildagent
@@ -67,8 +76,19 @@ spec:
           value: "$azureDevOpsUri"
         - name: AZP_TOKEN
           value: "$azureDevOpsPat"
-
+        resources:
+          requests:
+            cpu: "1"
+            memory: "1024Mi"
+          limits:
+            cpu: "2"
+            memory: "2048Mi"
 EOF
 )
 
-echo "$buildagent" | kubectl apply
+# Deployment to AKS
+sudo az aks install-cli
+echo "$buildagent" | kubectl apply -f -
+
+# Enable horizontal pod scaling - https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-scale
+kubectl autoscale deployment "buildagent-deployment" --cpu-percent=50 --min=1 --max=10

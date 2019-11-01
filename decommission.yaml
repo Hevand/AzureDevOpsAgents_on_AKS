@@ -1,0 +1,26 @@
+# Provision the build infrastructuree
+# Start with a minimal script that will provision the infrastructure. 
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Decommission
+  jobs:
+  - job: Decommission
+    pool: 
+      vmImage: 'ubuntu-latest'
+    continueOnError: true
+    steps:
+    - script: echo my first build
+      displayName: 'Run a simple script'
+
+- stage: Clean
+  jobs:
+  - job: Clean
+    pool: 
+      vmImage: 'ubuntu-latest'
+    continueOnError: true
+    steps:
+    - script: echo my second build
+      displayName: 'Run a simple script'

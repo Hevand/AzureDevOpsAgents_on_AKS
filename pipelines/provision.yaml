@@ -4,6 +4,9 @@
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+- group: environment-variables
+
 stages:
 - stage: Provision
   jobs:
@@ -12,5 +15,11 @@ stages:
       vmImage: 'ubuntu-latest'
     continueOnError: true
     steps:
-    - script: echo my first build
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+        scriptType: 'bash'
+        scriptLocation: 'scriptPath'
+        scriptPath: '/pipelines/scripts/provision.sh'
+        arguments: '-s $(SubscriptionId) -o $(Organization) -t $(PrivateAccessToken)'
       displayName: 'Run a simple script'

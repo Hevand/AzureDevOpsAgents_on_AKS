@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Azure DevOps
-azureDevOpsUri="https://dev.azure.com/hevand"
-azureDevOpsPat="35m24umnhnhcwr7koyuwkcklzellbx6lbh3tlpbg5cq2ngmzrgma"
+while getopts s:o:t: opts; do
+   case ${opts} in
+      s) subscriptionId=${OPTART} ;;
+      o) azureDevOpsUri=${OPTARG} ;;
+      t) azureDevOpsPat=${OPTARG} ;;
+   esac
+done
 
 #### Configuration
-subscriptionId=""
 location="WestEurope"
 resourceGroup="blog-buildagent-rg"
 clusterName="azdo"
@@ -13,15 +16,18 @@ containerRepositoryName="azuredevopsbuildagentimages"
 containerName="buildagent"
 
 # Let's make sure that we're logged in as the authorized user and working in the right subscription:
-az login
 az account set -s $subscriptionId
 
 az configure --defaults location=$location
 
 # Azure CLI defaults / extensions
 # - Cluster autoscaler: https://docs.microsoft.com/en-us/azure/aks/cluster-autoscaler
+# - Azure 
 az extension add --name aks-preview
 az extension update --name aks-preview
+
+az extension add --name azure-devops 
+az extension update --name azure-devops
 
 ## Create Resource Group
 az group create --name $resourceGroup

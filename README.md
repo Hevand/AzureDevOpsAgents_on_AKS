@@ -249,7 +249,15 @@ In the Azure DevOps environment, create the following:
 - A Service Connection for every project, configured with the Azure AD application ID. 
 - A (number of) build + release pipelines, to leverage the service connection and generate enough load to see the auto-scaling in action. 
 
+# Conclusions
+## Next steps
+## Cleaning up
+- build agents are registered for a _long_ time?
+- [Verion and upgrade](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/agents?view=azure-devops#agent-version-and-upgrades)
 
 
 ## Errata
 <sup>1</sup> Both Subscriptions and Resource Groups provide sufficient isolation for this article. Evaluating all considerations that apply to your particular case would be beyond the scope of this article. 
+
+### Example last section
+Text goes here.

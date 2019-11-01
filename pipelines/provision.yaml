@@ -7,19 +7,134 @@ pool:
 variables:
 - group: environment-variables
 
-stages:
-- stage: Provision
-  jobs:
-  - job: Build
-    pool: 
-      vmImage: 'ubuntu-latest'
-    continueOnError: true
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
-        scriptType: 'bash'
-        scriptLocation: 'scriptPath'
-        scriptPath: '/pipelines/scripts/provision.sh'
-        arguments: '-s $(SubscriptionId) -o $(Organization) -t $(PrivateAccessToken)'
-      displayName: 'Run a simple script'
+steps:
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      #### Configuration
+      location="WestEurope"
+      resourceGroup="blog-buildagent-rg"
+      clusterName="azdo"
+      containerRepositoryName="azuredevopsbuildagentimages"
+      containerName="buildagent"
+
+      # Let's make sure that we're logged in as the authorized user and working in the right subscription:
+      az account set -s $(subscriptionId)
+
+      az configure --defaults location=$location
+
+      # Azure CLI defaults / extensions
+      # - Cluster autoscaler: https://docs.microsoft.com/en-us/azure/aks/cluster-autoscaler
+      # - Azure 
+      az extension add --name aks-preview
+      az extension update --name aks-preview
+
+      az extension add --name azure-devops 
+      az extension update --name azure-devops
+  displayName: 'Prepare hosted build agent - set variables / load extension'
+
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      ## Create Resource Group
+      az group create --name $resourceGroup
+  displayName: 'Create Resource Group'
+
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Create an ACR
+      az acr create -g $resourceGroup -n $containerRepositoryName --sku Basic
+  displayName: 'Create Azure Container Repository'
+
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # - Connect with ACR for service principal authorization
+      # - Enable VM Scale Sets + AutoScaling (1..10)
+      az aks create -g $resourceGroup -n $clusterName \
+        --ssh-key-value ~/.ssh/id_rsa.pub \
+        --attach-acr $containerRepositoryName \
+        --node-count 1 \
+        --enable-vmss \
+        --enable-cluster-autoscaler \
+        --min-count 1 \
+        --max-count 10
+  displayName: 'Create Azure Kubernetes Services'
+
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      cd */buildagent
+      az acr login --name $containerRepositoryName
+      az acr build -t $containerName -r $containerRepositoryName .
+  displayName: 'Generate and push build agent container image'
+
+- task: AzureCLI@2
+  inputs: 
+    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Get AKS credentials, to be used with kubectl
+      az aks get-credentials -g $resourceGroup -n $clusterName
+
+      # Deployment YAML file
+      # - Integrated in deploy.sh for simplified / readable parameter substitution
+      buildagent=$(cat << EOF
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: buildagent-deployment
+        labels:
+          app: buildagent-deployment
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: buildagent
+        template:
+          metadata:
+            labels:
+              app: buildagent
+          spec:
+            containers:
+            - name: buildagent
+              image: $containerRepositoryName.azurecr.io/$containerName:latest
+              env:
+              - name: AZP_URL
+                value: "$azureDevOpsUri"
+              - name: AZP_TOKEN
+                value: "$azureDevOpsPat"
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: "1024Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2048Mi"
+      EOF
+      )
+
+      # Deployment to AKS
+      sudo az aks install-cli
+      echo "$buildagent" | kubectl apply -f -
+
+      # Enable horizontal pod scaling - https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-scale
+      kubectl autoscale deployment "buildagent-deployment" --cpu-percent=50 --min=1 --max=10
+  displayName: 'Generate deployment manifest and deploy to AKS'

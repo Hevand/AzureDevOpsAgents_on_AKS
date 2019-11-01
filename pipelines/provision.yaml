@@ -30,10 +30,10 @@ steps:
       # - Cluster autoscaler: https://docs.microsoft.com/en-us/azure/aks/cluster-autoscaler
       # - Azure 
       az extension add --name aks-preview
-      az extension update --name aks-preview
+      az extension update --name aks-preview || true
 
       az extension add --name azure-devops 
-      az extension update --name azure-devops
+      az extension update --name azure-devops || true
   displayName: 'Prepare hosted build agent - set variables / load extension'
 
 - task: AzureCLI@2

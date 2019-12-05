@@ -20,7 +20,7 @@ variables:
 steps:
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -36,7 +36,7 @@ steps:
 
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -45,7 +45,7 @@ steps:
 
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -55,7 +55,7 @@ steps:
 
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -73,7 +73,7 @@ steps:
 
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -84,7 +84,7 @@ steps:
 
 - task: AzureCLI@2
   inputs: 
-    azureSubscription: 'Windows Azure MSDN - Visual Studio Ultimate(82d91d17-bf9c-4f1b-940d-505d7cabbd6c)'
+    azureSubscription: 'Azure'
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     inlineScript: |

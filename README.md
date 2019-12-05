@@ -1,10 +1,10 @@
 # DevOps
 ## About
-As companies accelerate their move to the cloud, they run into scenarios where empowering employees, securing the environment and running costs start to negatively impact one another. 
+As companies accelerate their move to the cloud, they run into scenarios where empowering employees, having a secure environment and cloud consumption start to negatively impact one another. 
 
-In those situations, it is not always obvious what to do. In this article, we'll evaluate our options for one particular scenario: 
+In those situations, it is not always obvious what to do. So, let's  evaluate our options based on the following scenario: 
 
-Company A has many applications that are under active development / support. Every application has a team working on it, responsible for their own application and infrastructure. Source code is stored on premises and is not accessible via the internet. The company is in favor of using Azure DevOps Pipelines to manage their release process for Azure deployments. 
+Company A is developing multiple applications. Every application is owned by a team, and that team is responsible for application and infrastructure. Application source code is stored on premises and is not accessible via the internet. The company is using Azure DevOps Pipelines to manage their release process for Azure deployments.
 
 >**Introduction to Azure DevOps**: [Azure DevOps](https://docs.microsoft.com/en-us/azure/devops/user-guide/what-is-azure-devops?view=azure-devops) is a Microsoft service, offering end-to-end capabilities required for software development teams. Azure DevOps focusses on application development teams and is used by enterprises and individual users. 
 >Azure DevOps consists of a set of services, ranging from [Repos](https://azure.microsoft.com/services/devops/repos/) that store and version your source code, via [Pipelines](https://azure.microsoft.com/services/devops/pipelines/) that allow for hosting your CI/CD process, planning project activities and track progression via [Boards](https://azure.microsoft.com/services/devops/boards/) and [Test Plans](https://azure.microsoft.com/en-us/services/devops/test-plans/) and distribute versions of your project and its components as [Artifacts](https://azure.microsoft.com/en-us/services/devops/artifacts/). 
@@ -15,9 +15,9 @@ To achieve their goals, the customer realized that they'll need to address sever
 - Allow the Azure Pipeline to create and configure Azure resources that are required by the application that is being deployed (RBAC)
 - Prevent Azure Pipeline to create, delete or modify Azure resources that are **not** related to the application that is being deployed (RBAC)
 
-As Microsoft-hosted agents will have trouble accessing the on premises source code, Company A started looking at self-hosted agents. By making these project-specific, it is possible to assign a managed service identity with limited permissions to the teams applications / infrastructure. 
+Azure DevOps Pipelines offers Microsoft-hosted agents, but as these agents are not part of your companies network they will have trouble accessing the on premises source code. Consequently, Company A started looking at self-hosted agents. Every agent was made project-specific, so that it was possible to assign a managed service identity and have this identity be authorized ONLY to the teams applications / infrastructure. 
 
-Applying this concept to their organization, they drafted an initial approach and got started. For every team and/or application: 
+Applying this concept to their organization, they drafted an initial approach and implemented that. For every team and/or application: 
 1) In the Azure DevOps organization, create a Project
 2) In the Azure environment, create an Azure Subscription or Resource Group<sup>1</sup>
 3) In the Azure environment, create a self-hosted build agent (VM) that connects to our Azure DevOps project. Configure the VM with a Managed Service Identity
@@ -26,15 +26,15 @@ Applying this concept to their organization, they drafted an initial approach an
 
 ![Azure agent per project](assets/AzureAgentPerProject.svg)
 
-As should be expected, this approach works. It is even somewhat successful, as it addresses all of the challenges identified at the beginning of this article and is mostly manageable. 
+This approach works quite well. It addresses all of the challenges identified at the beginning of this article and is manageable by the operations team. 
 
-Unfortunately, the approach comes with a major disadvantage - the costs grow linearly with the number of projects. As the number of project grows, the number of self-hosted build agents grows with it. What works for few applications does not work for many. 
+Unfortunately, the approach comes with a major disadvantage - the costs are directly linked to the number of projects. As the number of project grows, the number of self-hosted build agents grows with it. Most of these agents would only be used periodically, but shutting them down complicates and delays the CI/CD process. What works for few applications does not work for many. 
 
 So... how can we optimize?
 
-## Reduce running costs of the current setup
+## Reduce running costs of existing infrastructure
 ### Option 1: Keep setup as-is; configure Auto-shutdown / automated startup
-A quick mitigation is to shut down the environment outside of business hours. This is relatively simple to complete and comes with immediate cost savings as  reducing the compute hours from 24*7 to 12*5 is reducing overall costs with 60%!
+A quick mitigation is to shut down the environment outside of business hours. This is relatively simple to complete and comes with immediate cost savings as  reducing the compute hours from 24*7 to 12*5 is reducing costs with 60%!
 
 ### Option 2: Keep setup as-is; switch to B-series machines
 Shutting down our build agents might not be desirable, as development activities could happen across timezones and nightly builds / test runs are a reality for many organizations. 
@@ -52,7 +52,7 @@ Another way to reduce costs is via [Reserved Instances (RI)](https://azure.micro
 > * a single DS3v2 (4 vCPU, 14GB RAM, 28GB Temp storage), without reservations 
 > * a B4MS (4 vCPU, 14GB RAM, 32GB Temp storage) + 3 years reservation
 >
-> The savings are more than **73%**! This type of savings is even higher than what was achieved by shutting down the machines outside of business hours(!).
+> The savings are more than **73%**, exceeding the savings realized by shutting down the machines outside of business hours(!).
 
 ## Reconsider our setup
 Reducing the costs for a given VM is a good practice and yields great results in this scenario. But what if we would change the approach even more dramatically? 
@@ -61,7 +61,7 @@ In the current cost model, the baseline infrastructure requirement is driven by 
 
 When we start sharing build agents across projects, that changes. When shared, the _max number of parallel builds_ is what defines the required infrastructure and corresponding costs.
 
-That makes for a much easier conversation with anyone that controls our budget, so let's think about how we can sharing the resources across projects - without sacrificing security or isolation. 
+That makes for a much easier conversation with anyone that controls our budget, so let's think about how we can share build agents across projects - without sacrificing security or isolation. 
 
 ## The concepts
 ### Azure DevOps Agent Pools
@@ -81,12 +81,14 @@ During execution of a Pipeline, DevOps will pass the connection to the build age
 ### Azure Kubernetes Cluster Scaling
 A container orchestrator allows us to manage a given workload on a cluster of VMs. To optimize running costs while maximizing the number of concurrent pipeline executions, it would be very beneficial to dynamically scale the number of nodes in the cluster. 
 
-Fortunately, this is possible by combining the AKS cluster autoscaler with [horizontal pod scaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/): 
+On Azure, this is possible by combining the AKS cluster autoscaler with [horizontal pod scaling](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/): 
 - [AKS Auto-scaler](https://docs.microsoft.com/en-us/azure/aks/cluster-autoscaler) (Preview) - Scales out the underlying cluster, to be used by Kubernetes to host 1 or more containers.
-- [Horizontal pod scaling on AKS](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-scale)
+- [Horizontal pod scaling on AKS](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-scale) - Adding additional pods (i.e. agents) based on the resource utilization of the existing pods.
 
-## Deploy the solution
+## The technology
 ### Prerequisites
+Please ensure that the following components are installed / available: 
+
 **On your local machine**
 - [Docker Desktop (for Windows)](https://docs.docker.com/docker-for-windows/install/)
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
@@ -96,8 +98,13 @@ Fortunately, this is possible by combining the AKS cluster autoscaler with [hori
 - [Azure subscription](https://azure.microsoft.com/en-us/free/)
 - [Azure DevOps organization](https://docs.microsoft.com/en-us/azure/devops/user-guide/sign-up-invite-teammates?view=azure-devops)
 
-### Prepare the Azure environment
-Before executing any (potentially destructive) commands, let's make sure that we're logged in as the authorized user and are working in the appropriate subscription / location:
+
+### Create a _Default_ agent pool and get credentials
+- Create an [Agent Pool](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/pools-queues?view=azure-devops&tabs=yaml%2Cbrowser#creating-agent-pools) named "_Default_" on your Azure DevOps organization. While using a different name is possible, it requires you to modify some of the scripts / parameters that come with this article.  
+- [Prepare permissions](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/v2-linux?view=azure-devops#permissions) by generating a Personal Access Token (PAT). This token should be treated as highly confidential and stored securely.
+
+### Setup the build agent in your Azure environment
+First, we connect with Azure and ensure that we're working in the appropriate subscription / location:
 
 ```bash
 az login
@@ -135,7 +142,7 @@ az aks create -g $resourceGroup -n $clusterName \
   --max-count 10
 ```
 
-### Generate the Build Agent container
+### Package your build agent as a container
 Once these are successfully provisioned, it is time to create the docker file for the build agent. 
 
 We're going to use the [linux-based self-hosted agent on docker](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/docker?view=azure-devops#linux).
@@ -170,7 +177,7 @@ RUN chmod +x start.sh
 CMD ["./start.sh"]
 ```
 
-Once the dockerfile is created, it can be build as follows: 
+Once the dockerfile is created, it can be build and published as follows: 
 
 ```bash
 # Build and push the container image to the ACR
@@ -179,8 +186,8 @@ az acr login --name $containerRepositoryName
 az acr build -t $containerName -r $containerRepositoryName .
 ```
 
-### Deploy the build agent
-The next step is to deploy the container image to the kubernetes environment. For this purpose, we're going to create a yaml file that defines the appropriate image and the number of instances. 
+### Deploy the container onto AKS
+The next step is to deploy the build agent image to the kubernetes environment. For this purpose, we're going to use a yaml file that defines the appropriate image, resource requirements and the number of instances. 
 
 Specific for this article are the following two settings: 
 - _environment variables_, that are used to pass the Azure DevOps organization / key to the container during startup. 
@@ -225,7 +232,7 @@ EOF
 )
 ```
 
-And to deploy: 
+This yaml file is then used to deploy the agent: 
 ```bash
 # Deployment to AKS
 sudo az aks install-cli
@@ -235,29 +242,99 @@ echo "$buildagent" | kubectl apply -f -
 kubectl autoscale deployment "buildagent-deployment" --cpu-percent=50 --min=1 --max=10
 ```
 
+That's it! You've just created an environment with a single build agent, which will automatically scale out based on your organization's requirements. 
+
+As the build agent is now shared across projects, the last step is to ensure that a build agent can only interact with source code repositories and azure infrastructure that is owned by the project.  
+
 ## Project and resource group setup
 ### In Azure 
 In the Azure environment, create the following:
-- A Resource Group per project
-- An Azure AD Application per project
-- Assign the Azure AD application sufficient permissions to the resource group. 
+- A [Resource Group](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-overview#resource-groups) per project / environment
+- An [Azure AD Application](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) per project / environment
+- [Assign the Azure AD application Contributor permissions](https://docs.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal) to the appropriate resource group(s). 
 
 
 ### In Azure DevOps
 In the Azure DevOps environment, create the following:
-- A Project per project
-- A Service Connection for every project, configured with the Azure AD application ID. 
-- A (number of) build + release pipelines, to leverage the service connection and generate enough load to see the auto-scaling in action. 
+- A [Project](https://docs.microsoft.com/en-us/azure/devops/organizations/projects/create-project?view=azure-devops&tabs=preview-page) per project
+- A [Service Connection](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/service-endpoints?view=azure-devops&tabs=yaml) for every project, configured with the Azure AD application ID. 
+- A (number of) [build + release pipelines](https://docs.microsoft.com/en-us/azure/devops/pipelines/create-first-pipeline?view=azure-devops&tabs=browser%2Ctfs-2018-2). These pipelines should use the _Default_ agent pool and leverage the service connection when deploying to Azure. 
+
+With this in place, the only step left is to generate enough load to see the auto-scaling in action. 
 
 # Conclusions
-## Next steps
-## Cleaning up
-- build agents are registered for a _long_ time?
+## Cleaning up orphaned build agents
+Every instance of the build agent will register itself with our agent pool. As we're continuously generating new ones (by design), over time the number of build agents will only grow. To address this, consider the following script: 
+
+
+```bash
+#!/bin/bash
+
+while getopts o:p:t: opts; do
+   case ${opts} in
+      o) azureDevOpsUri=${OPTARG} ;;
+      p) azureDevOpsAgentPoolName=${OPTARG} ;;
+      t) azureDevOpsPat=${OPTARG} ;;
+   esac
+done
+
+# AZ DevOps CLI doesn't allow management of pipeline agents (yet) 
+# https://docs.microsoft.com/en-us/rest/api/azure/devops/distributedtask/agents/list?view=azure-devops-rest-5.1
+
+echo "This script will remove all offline agents for Organization '$azureDevOpsUri' and Pool '$azureDevOpsAgentPoolName'";
+# Get the agent pool(s) for this organization
+AZP_AGENT_POOLS=$(curl -LsS \
+  -u user:$azureDevOpsPat \
+  -H 'Accept:application/json;' \
+  "$azureDevOpsUri/_apis/distributedtask/pools?api-version=5.1")
+
+echo "The following agent pools were found:"
+echo $AZP_AGENT_POOLS | jq ".value[] | [.name, .id] | tostring"
+
+AZP_AGENT_POOLID=$(echo $AZP_AGENT_POOLS | jq ".value[] | select(.name==\"$azureDevOpsAgentPoolName\") | .id")
+echo "Continuing with agent pool id: '$AZP_AGENT_POOLID'"
+echo ""
+
+
+# Get the list of agents that exist
+AZP_AGENT_LIST=$(curl -LsS \
+  -u user:$azureDevOpsPat \
+  -H 'Accept:application/json;' \
+  "$azureDevOpsUri/_apis/distributedtask/pools/$AZP_AGENT_POOLID/agents?api-version=5.1")
+
+echo "The following agents were found in pool '$AZP_AGENT_POOLID':"
+echo $AZP_AGENT_LIST | jq ".value[] | [.name, .id, .status] | tostring"
+
+# Filter for offline agents
+AZP_AGENT_OFFLINE_IDS=$(echo $AZP_AGENT_LIST | jq '.value[] | select(.status=="offline") | .id')
+
+for i in $AZP_AGENT_OFFLINE_IDS
+do 
+  echo "Deleting Agent '$i' in Pool '$AZP_AGENT_POOLID'..."
+  # Delete
+  AZP_AGENT_RESPONSE=$(curl -LsS \
+    -X DELETE \
+    -u user:$azureDevOpsPat \
+    -H 'Accept:application/json;api-version=3.0-preview' \
+    "$azureDevOpsUri/_apis/distributedtask/pools/$AZP_AGENT_POOLID/agents/$i?api-version=5.1")
+
+  echo $AZP_AGENT_RESPONSE
+
+  echo ""
+done
+
+echo "Script completed"
+```
+
+## Regularly updating the build agent
+Microsoft releases a new version of the build agent every few weeks. In this article, we've taken a specific version and used this to generate our own. As part of application lifecycle management and subject to your requirements, the build agent should be updated every once in a while. 
+
 - [Verion and upgrade](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/agents?view=azure-devops#agent-version-and-upgrades)
+
+
+## Storing application secrets in the library
+In this article, we've not used an Azure DevOps variable groups to store parameters. In practice, you do want to store common and sensitive (such as a PAT) parameters outside of the actual pipeline. [Variable groups](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/variable-groups?view=azure-devops&tabs=yaml) offer that flexibility. 
 
 
 ## Errata
 <sup>1</sup> Both Subscriptions and Resource Groups provide sufficient isolation for this article. Evaluating all considerations that apply to your particular case would be beyond the scope of this article. 
-
-### Example last section
-Text goes here.

@@ -62,7 +62,7 @@ steps:
       # - Connect with ACR for service principal authorization
       # - Enable VM Scale Sets + AutoScaling (1..10)
       az aks create -g $(resourceGroup) -n $(clusterName) \
-        --generate-ssh-keys  \
+        --generate-ssh-keys \
         --attach-acr $(containerRepositoryName) \
         --node-count 1 \
         --enable-vmss \

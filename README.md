@@ -1,6 +1,6 @@
 # DevOps
 ## About
-As companies accelerate their move to the cloud, they run into scenarios where empowering employees, having a secure environment and cloud consumption start to negatively impact one another. 
+As companies accelerate their move to the cloud, they run into scenarios where self-service, isolation and security starts to negatively impact the costs involved. 
 
 In those situations, it is not always obvious what to do. So, let's  evaluate our options based on the following scenario: 
 

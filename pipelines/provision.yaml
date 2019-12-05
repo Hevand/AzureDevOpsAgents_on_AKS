@@ -61,14 +61,7 @@ steps:
     inlineScript: |
       # - Connect with ACR for service principal authorization
       # - Enable VM Scale Sets + AutoScaling (1..10)
-      az aks create -g $(resourceGroup) -n $(clusterName) \
-        --generate-ssh-keys \
-        --attach-acr $(containerRepositoryName) \
-        --node-count 1 \
-        --enable-vmss \
-        --enable-cluster-autoscaler \
-        --min-count 1 \
-        --max-count 10
+      az aks create -g $(resourceGroup) -n $(clusterName) --generate-ssh-keys --attach-acr $(containerRepositoryName) --node-count 1 --enable-vmss --enable-cluster-autoscaler --min-count 1 --max-count 10
   displayName: 'Create Azure Kubernetes Services - $(clusterName)'
 
 - task: AzureCLI@2
